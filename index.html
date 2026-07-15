@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>2048 Telegram App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #faf8ef;
+            --container-bg: #bbada0;
+            --cell-bg: rgba(238, 228, 218, 0.35);
+            --text-dark: #776e65;
+            --text-light: #f9f6f2;
+            --accent-color: #8f7a66;
+            
+            --tile-2: #eee4da;
+            --tile-4: #ede0c8;
+            --tile-6: #f2b179;
+            --tile-8: #f2b179;
+            --tile-12: #f59563;
+            --tile-16: #f59563;
+            --tile-24: #f67c5f;
+            --tile-32: #f67c5f;
+            --tile-48: #f65e3b;
+            --tile-64: #f65e3b;
+            --tile-128: #edcf72;
+            --tile-256: #edcc61;
+            --tile-512: #edc850;
+            --tile-1024: #edc53f;
+            --tile-2048: #edc22e;
+            --tile-super: #3c3a32;
+        }
+
+        body.theme-neon {
+            --bg-color: #0d0e15;
+            --container-bg: #1a1c29;
+            --cell-bg: rgba(255, 255, 255, 0.05);
+            --text-dark: #a9b2c3;
+            --text-light: #ffffff;
+            --accent-color: #8a2be2;
+            --tile-2: #25283d;
+            --tile-4: #2d325a;
+            --tile-6: #3d3b7c;
+            --tile-8: #3d3b7c;
+            --tile-12: #613fa0;
+            --tile-16: #613fa0;
+            --tile-24: #8a2be2;
+            --tile-32: #8a2be2;
+            --tile-64: #ba55d3;
+            --tile-128: #ff007f;
+            --tile-256: #ff1493;
+            --tile-512: #00ffff;
+            --tile-1024: #1e90ff;
+            --tile-2048: #32cd32;
+        }
+
+        body.theme-emerald {
+            --bg-color: #f4f7f6;
+            --container-bg: #2d5a27;
+            --cell-bg: rgba(255, 255, 255, 0.15);
+            --text-dark: #1b3a1a;
+            --text-light: #ffffff;
+            --accent-color: #3b7a57;
+            --tile-2: #d8e2dc;
+            --tile-4: #ffe5d9;
+            --tile-6: #98f5e1;
+            --tile-8: #98f5e1;
+            --tile-12: #80ed99;
+            --tile-16: #80ed99;
+            --tile-24: #57cc99;
+            --tile-32: #57cc99;
+            --tile-64: #38b000;
+            --tile-128: #007200;
+            --tile-256: #132a13;
+            --tile-512: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+            padding: 15px;
+            transition: background-color 0.3s ease;
+        }
+
+        /* --- ЭКРАН МЕНЮ --- */
+        #menu-screen {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 360px;
+            gap: 15px;
+            text-align: center;
+            z-index: 20;
+        }
+
+        .logo-container {
+            font-size: 54px;
+            font-weight: 900;
+            color: var(--accent-color);
+            letter-spacing: -2px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .menu-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 22px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        body.theme-neon .menu-card {
+            background: rgba(26, 28, 41, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .setting-section h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            opacity: 0.8;
+            font-weight: 700;
+        }
+
+        .options-group {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .option-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 8px 4px;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--text-dark);
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        body.theme-neon .option-btn {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .option-btn.active {
+            background: var(--accent-color);
+            color: var(--text-light);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* --- ИГРОВОЙ ЭКРАН --- */
+        #game-screen {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo-mini {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--accent-color);
+        }
+
+        .back-to-menu-btn {
+            background: none;
+            border: none;
+            color: var(--text-dark);
+            opacity: 0.7;
+            font-size: 13px;
+            text-decoration: underline;
+            cursor: pointer;
+            text-align: left;
+            margin-top: 2px;
+        }
+
+        .scores {
+            display: flex;
+            gap: 8px;
+        }
+
+        .score-box {
+            background: var(--container-bg);
+            color: var(--text-light);
+            padding: 6px 12px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 70px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .score-title {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: bold;
+            opacity: 0.7;
+        }
+
+        .score-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* Контейнер игрового поля */
+        #grid-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: var(--container-bg);
+            border-radius: 20px;
+            padding: 12px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+
+        #grid-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: grid;
+            
+            --grid-size: 4;
+            --grid-gap: 10px;
+            
+            grid-template-columns: repeat(var(--grid-size), 1fr);
+            grid-template-rows: repeat(var(--grid-size), 1fr);
+            gap: var(--grid-gap);
+        }
+
+        .grid-cell {
+            background-color: var(--cell-bg);
+            border-radius: 8px;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Плитки */
+        .tile {
+            position: absolute;
+            top: 0;
+            left: 0;
+            --tile-width: calc((100% - (var(--grid-size) - 1) * var(--grid-gap)) / var(--grid-size));
+            width: var(--tile-width);
+            height: var(--tile-width);
+            border-radius: 8px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            pointer-events: none;
+
+            transform: translate(
+                calc(var(--c) * (100% + var(--grid-gap))),
+                calc(var(--r) * (100% + var(--grid-gap)))
+            );
+            transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .tile-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+            animation: spawn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-size: calc(180px / var(--grid-size)); 
+            max-font-size: 32px;
+        }
+
+        .tile-128 .tile-inner, .tile-256 .tile-inner, .tile-512 .tile-inner {
+            font-size: calc(140px / var(--grid-size));
+        }
+        .tile-1024 .tile-inner, .tile-2048 .tile-inner, .tile-super .tile-inner {
+            font-size: calc(110px / var(--grid-size));
+        }
+
+        @keyframes spawn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Анимация слияния */
+        .tile-merged .tile-inner {
+            animation: pop 0.15s ease-in-out;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        /* Цвета плиток */
+        .tile-2 .tile-inner { background: var(--tile-2); color: #776e65; }
+        .tile-4 .tile-inner { background: var(--tile-4); color: #776e65; }
+        .tile-6 .tile-inner { background: var(--tile-6); color: #fff; }
+        .tile-8 .tile-inner { background: var(--tile-8); color: #fff; }
+        .tile-12 .tile-inner { background: var(--tile-12); color: #fff; }
+        .tile-16 .tile-inner { background: var(--tile-16); color: #fff; }
+        .tile-24 .tile-inner { background: var(--tile-24); color: #fff; }
+        .tile-32 .tile-inner { background: var(--tile-32); color: #fff; }
+        .tile-48 .tile-inner { background: var(--tile-48); color: #fff; }
+        .tile-64 .tile-inner { background: var(--tile-64); color: #fff; }
+        .tile-128 .tile-inner { background: var(--tile-128); color: #fff; }
+        .tile-256 .tile-inner { background: var(--tile-256); color: #fff; }
+        .tile-512 .tile-inner { background: var(--tile-512); color: #fff; }
+        .tile-1024 .tile-inner { background: var(--tile-1024); color: #fff; }
+        .tile-2048 .tile-inner { background: var(--tile-2048); color: #fff; }
+        .tile-super .tile-inner { background: var(--tile-super); color: #fff; }
+
+        /* Оверлеи */
+        #game-over-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(238, 228, 218, 0.9);
+            border-radius: 20px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+
+        body.theme-neon #game-over-overlay {
+            background: rgba(13, 14, 21, 0.9);
+        }
+
+        #game-over-overlay h2 {
+            font-size: 32px;
+            color: var(--text-dark);
+            font-weight: 800;
+        }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: var(--text-light);
+            border: none;
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.1s ease, opacity 0.2s;
+            width: 80%;
+            max-width: 250px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-secondary {
+            background-color: #f2b179;
+            color: white;
+        }
+
+        .footer-info {
+            text-align: center;
+            font-size: 13px;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu-screen">
+        <div class="logo-container">2048</div>
+        
+        <div class="menu-card">
+            <div class="setting-section">
+                <h3>Размер сетки</h3>
+                <div class="options-group" id="difficulty-group">
+                    <button class="option-btn" data-size="3">3x3 <br><small>Тяжело</small></button>
+                    <button class="option-btn active" data-size="4">4x4 <br><small>Обычный</small></button>
+                    <button class="option-btn" data-size="5">5x5 <br><small>Легко</small></button>
+                    <button class="option-btn" data-size="6">6x6 <br><small>Релакс</small></button>
+                </div>
+            </div>
+
+            <div class="setting-section">
+                <h3>Правила слияния</h3>
+                <div class="options-group" id="rules-group">
+                    <button class="option-btn active" data-rules="2">По 2 блока<br><small>Классика</small></button>
+                    <button class="option-btn" data-rules="3">По 3 блока<br><small>Облегченный</small></button>
+                </div>
+            </div>
+
+            <div class="setting-section">
+                <h3>Стиль оформления</h3>
+                <div class="options-group" id="theme-group">
+                    <button class="option-btn active" data-theme="classic">Retro</button>
+                    <button class="option-btn" data-theme="neon">Neon</button>
+                    <button class="option-btn" data-theme="emerald">Forest</button>
+                </div>
+            </div>
+
+            <button class="btn" id="btn-start" style="width:100%; max-width:none; margin-top:5px;">Играть</button>
+        </div>
+    </div>
+
+    <div id="game-screen">
+        <header>
+            <div class="header-left">
+                <div class="logo-mini">2048</div>
+                <button class="back-to-menu-btn" id="btn-menu">В меню</button>
+            </div>
+            <div class="scores">
+                <div class="score-box">
+                    <div class="score-title">Счет</div>
+                    <div id="score" class="score-value">0</div>
+                </div>
+                <div class="score-box">
+                    <div class="score-title">Рекорд</div>
+                    <div id="best-score" class="score-value">0</div>
+                </div>
+            </div>
+        </header>
+
+        <div id="grid-wrapper">
+            <div id="grid-container">
+                </div>
+
+            <div id="game-over-overlay">
+                <h2>Игра окончена</h2>
+                <button class="btn btn-secondary" id="btn-ad">Продолжить за рекламу</button>
+                <button class="btn" id="btn-restart">Начать заново</button>
+            </div>
+        </div>
+
+        <div class="footer-info">Управляйте свайпами</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const menuScreen = document.getElementById('menu-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gridContainer = document.getElementById('grid-container');
+        const scoreDisplay = document.getElementById('score');
+        const bestScoreDisplay = document.getElementById('best-score');
+        const gameOverOverlay = document.getElementById('game-over-overlay');
+        
+        const btnStart = document.getElementById('btn-start');
+        const btnMenu = document.getElementById('btn-menu');
+        const btnRestart = document.getElementById('btn-restart');
+        const btnAd = document.getElementById('btn-ad');
+
+        let boardSize = 4;
+        let mergeRule = 2; 
+        let board = [];
+        let score = 0;
+        let adUsedInThisGame = false;
+
+        class Tile {
+            constructor(row, col, value) {
+                this.row = row;
+                this.col = col;
+                this.value = value;
+                this.previousRow = null;
+                this.previousCol = null;
+                this.mergedInto = null;
+                this.element = this.createElement();
+                this.updatePositionStyles();
+            }
+
+            createElement() {
+                const element = document.createElement('div');
+                element.classList.add('tile', `tile-${this.value}`);
+                
+                const inner = document.createElement('div');
+                inner.classList.add('tile-inner');
+                inner.textContent = this.value;
+                
+                element.appendChild(inner);
+                return element;
+            }
+
+            updatePositionStyles() {
+                this.element.style.setProperty('--r', this.row);
+                this.element.style.setProperty('--c', this.col);
+            }
+
+            updateValue(newValue) {
+                this.value = newValue;
+                this.element.className = `tile tile-${newValue}`;
+                this.element.querySelector('.tile-inner').textContent = newValue;
+                this.element.classList.add('tile-merged');
+                setTimeout(() => {
+                    this.element.classList.remove('tile-merged');
+                }, 150);
+            }
+        }
+
+        // Выбор размера сетки
+        document.getElementById('difficulty-group').addEventListener('click', (e) => {
+            const btn = e.target.closest('.option-btn');
+            if (!btn) return;
+            document.querySelectorAll('#difficulty-group .option-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            boardSize = parseInt(btn.dataset.size);
+        });
+
+        // Выбор правил слияния
+        document.getElementById('rules-group').addEventListener('click', (e) => {
+            const btn = e.target.closest('.option-btn');
+            if (!btn) return;
+            document.querySelectorAll('#rules-group .option-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            mergeRule = parseInt(btn.dataset.rules);
+        });
+
+        // Выбор темы
+        document.getElementById('theme-group').addEventListener('click', (e) => {
+            const btn = e.target.closest('.option-btn');
+            if (!btn) return;
+            document.querySelectorAll('#theme-group .option-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.body.className = '';
+            const theme = btn.dataset.theme;
+            if (theme !== 'classic') {
+                document.body.classList.add(`theme-${theme}`);
+            }
+        });
+
+        btnStart.addEventListener('click', () => {
+            menuScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            
+            bestScoreDisplay.textContent = localStorage.getItem(`2048-best-${boardSize}-${mergeRule}`) || 0;
+            
+            gridContainer.style.setProperty('--grid-size', boardSize);
+            gridContainer.style.setProperty('--grid-gap', boardSize >= 5 ? '6px' : '10px');
+
+            initGame();
+        });
+
+        btnMenu.addEventListener('click', () => {
+            gameScreen.style.display = 'none';
+            menuScreen.style.display = 'flex';
+        });
+
+        function initGame() {
+            gridContainer.innerHTML = '';
+            board = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+            score = 0;
+            scoreDisplay.textContent = 0;
+            adUsedInThisGame = false;
+            btnAd.style.display = 'block';
+            gameOverOverlay.style.display = 'none';
+
+            for (let i = 0; i < boardSize * boardSize; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('grid-cell');
+                gridContainer.appendChild(cell);
+            }
+
+            spawnTile();
+            spawnTile();
+            renderTiles();
+        }
+
+        function spawnTile() {
+            let emptyCells = [];
+            for (let r = 0; r < boardSize; r++) {
+                for (let c = 0; c < boardSize; c++) {
+                    if (!board[r][c]) emptyCells.push({r, c});
+                }
+            }
+            if (emptyCells.length > 0) {
+                let cell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                let value;
+                if (mergeRule === 3) {
+                    let rand = Math.random();
+                    value = rand < 0.6 ? 2 : (rand < 0.9 ? 3 : 4);
+                } else {
+                    value = Math.random() < 0.9 ? 2 : 4;
+                }
+                let tile = new Tile(cell.r, cell.c, value);
+                board[cell.r][cell.c] = tile;
+                
+                gridContainer.appendChild(tile.element);
+            }
+        }
+
+        function renderTiles() {
+            for (let r = 0; r < boardSize; r++) {
+                for (let c = 0; c < boardSize; c++) {
+                    let tile = board[r][c];
+                    if (tile) {
+                        tile.updatePositionStyles();
+                    }
+                }
+            }
+
+            scoreDisplay.textContent = score;
+            let currentBest = localStorage.getItem(`2048-best-${boardSize}-${mergeRule}`) || 0;
+            if (score > currentBest) {
+                localStorage.setItem(`2048-best-${boardSize}-${mergeRule}`, score);
+                bestScoreDisplay.textContent = score;
+            }
+        }
+
+        const vectors = {
+            0: { r: 0, c: -1 }, // Влево
+            1: { r: -1, c: 0 }, // Вверх
+            2: { r: 0, c: 1 },  // Вправо
+            3: { r: 1, c: 0 }   // Вниз
+        };
+
+        function makeMove(direction) {
+            if (gameOverOverlay.style.display === 'flex') return;
+
+            const vector = vectors[direction];
+            let moved = false;
+
+            const rows = buildTraversals(vector.r, 'r');
+            const cols = buildTraversals(vector.c, 'c');
+
+            prepareTiles();
+
+            rows.forEach(r => {
+                cols.forEach(c => {
+                    let tile = board[r][c];
+                    if (tile) {
+                        let positions = findFarthestPosition({r, c}, vector);
+                        let next = positions.next;
+
+                        if (mergeRule === 3) {
+                            let next2 = next ? findFarthestPosition(next, vector).next : null;
+                            
+                            if (next && next2 && 
+                                board[next.r][next.c] && board[next2.r][next2.c] &&
+                                !board[next.r][next.c].mergedInto && !board[next2.r][next2.c].mergedInto &&
+                                board[next.r][next.c].value === tile.value && 
+                                board[next2.r][next2.c].value === tile.value) {
+                                
+                                let targetTile = board[next2.r][next2.c];
+                                
+                                tile.previousRow = r; tile.previousCol = c;
+                                tile.row = next2.r; tile.col = next2.c;
+                                tile.updatePositionStyles(); // Запускаем анимацию скольжения первой плитки
+                                
+                                let midTile = board[next.r][next.c];
+                                midTile.previousRow = next.r; midTile.previousCol = next.c;
+                                midTile.row = next2.r; midTile.col = next2.c;
+                                midTile.updatePositionStyles(); // Запускаем анимацию скольжения второй плитки
+
+                                const t1 = tile.element; 
+                                const t2 = midTile.element;
+                                t1.style.zIndex = 1;
+                                t2.style.zIndex = 1;
+                                targetTile.element.style.zIndex = 2; // Цель всегда сверху
+
+                                const newValue = tile.value * 3;
+                                score += newValue;
+                                targetTile.mergedInto = true;
+
+                                // Ждем окончания перехода (150мс), затем удаляем старые элементы и делаем pop
+                                setTimeout(() => {
+                                    t1.remove();
+                                    t2.remove();
+                                    targetTile.updateValue(newValue);
+                                }, 150);
+
+                                board[r][c] = null;
+                                board[next.r][next.c] = null;
+                                moved = true;
+                            } else {
+                                if (positions.farthest.r !== r || positions.farthest.c !== c) {
+                                    tile.previousRow = r; tile.previousCol = c;
+                                    tile.row = positions.farthest.r; tile.col = positions.farthest.c;
+                                    board[positions.farthest.r][positions.farthest.c] = tile;
+                                    board[r][c] = null;
+                                    moved = true;
+                                }
+                            }
+                        } else {
+                            if (next && board[next.r][next.c] && !board[next.r][next.c].mergedInto && board[next.r][next.c].value === tile.value) {
+                                let targetTile = board[next.r][next.c];
+                                
+                                tile.previousRow = r; tile.previousCol = c;
+                                tile.row = next.r; tile.col = next.c;
+                                tile.updatePositionStyles(); // Запускаем анимацию скольжения
+
+                                const movingElement = tile.element;
+                                movingElement.style.zIndex = 1;
+                                targetTile.element.style.zIndex = 2; // Цель всегда сверху
+
+                                const newValue = tile.value * 2;
+                                score += newValue;
+                                targetTile.mergedInto = true;
+
+                                // Ждем завершения скольжения (150мс), удаляем старую плитку и обновляем новую
+                                setTimeout(() => {
+                                    movingElement.remove();
+                                    targetTile.updateValue(newValue);
+                                }, 150);
+
+                                board[r][c] = null;
+                                moved = true;
+                            } else {
+                                if (positions.farthest.r !== r || positions.farthest.c !== c) {
+                                    tile.previousRow = r; tile.previousCol = c;
+                                    tile.row = positions.farthest.r; tile.col = positions.farthest.c;
+                                    board[positions.farthest.r][positions.farthest.c] = tile;
+                                    board[r][c] = null;
+                                    moved = true;
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            if (moved) {
+                spawnTile();
+                renderTiles();
+                if (isGameOver()) {
+                    showGameOver();
+                }
+            }
+        }
+
+        function prepareTiles() {
+            for (let r = 0; r < boardSize; r++) {
+                for (let c = 0; c < boardSize; c++) {
+                    if (board[r][c]) {
+                        board[r][c].mergedInto = null;
+                    }
+                }
+            }
+        }
+
+        function buildTraversals(vectorVal, axis) {
+            let list = [];
+            for (let i = 0; i < boardSize; i++) list.push(i);
+            if (vectorVal === 1) list.reverse();
+            return list;
+        }
+
+        function findFarthestPosition(cell, vector) {
+            let prev;
+            do {
+                prev = cell;
+                cell = { r: prev.r + vector.r, c: prev.c + vector.c };
+            } while (cell.r >= 0 && cell.r < boardSize && cell.c >= 0 && cell.c < boardSize && !board[cell.r][cell.c]);
+
+            return {
+                farthest: prev,
+                next: (cell.r >= 0 && cell.r < boardSize && cell.c >= 0 && cell.c < boardSize) ? cell : null
+            };
+        }
+
+        function isGameOver() {
+            for (let r = 0; r < boardSize; r++) {
+                for (let c = 0; c < boardSize; c++) {
+                    if (!board[r][c]) return false;
+                }
+            }
+            
+            for (let r = 0; r < boardSize; r++) {
+                for (let c = 0; c < boardSize; c++) {
+                    let tile = board[r][c];
+                    for (let d = 0; d < 4; d++) {
+                        let v = vectors[d];
+                        
+                        if (mergeRule === 3) {
+                            let nr1 = r + v.r; let nc1 = c + v.c;
+                            let nr2 = r + v.r * 2; let nc2 = c + v.c * 2;
+                            if (nr2 >= 0 && nr2 < boardSize && nc2 >= 0 && nc2 < boardSize) {
+                                if (board[nr1][nc1] && board[nr2][nc2] && 
+                                    board[nr1][nc1].value === tile.value && 
+                                    board[nr2][nc2].value === tile.value) {
+                                    return false; 
+                                }
+                            }
+                        } else {
+                            let nr = r + v.r; let nc = c + v.c;
+                            if (nr >= 0 && nr < boardSize && nc >= 0 && nc < boardSize) {
+                                let other = board[nr][nc];
+                                if (other && other.value === tile.value) return false;
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function showGameOver() {
+            gameOverOverlay.style.display = 'flex';
+        }
+
+        // --- СЕНСОРНОЕ УПРАВЛЕНИЕ ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            if (gameScreen.style.display !== 'flex') return;
+
+            let touchEndX = e.changedTouches[0].clientX;
+            let touchEndY = e.changedTouches[0].clientY;
+
+            let dx = touchEndX - touchStartX;
+            let dy = touchEndY - touchStartY;
+            const threshold = 35;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (Math.abs(dx) > threshold) {
+                    if (dx > 0) makeMove(2); // Вправо
+                    else makeMove(0);        // Влево
+                }
+            } else {
+                if (Math.abs(dy) > threshold) {
+                    if (dy > 0) makeMove(3); // Вниз
+                    else makeMove(1);        // Вверх
+                }
+            }
+        }, { passive: true });
+
+        document.addEventListener('keydown', e => {
+            if (gameScreen.style.display !== 'flex') return;
+            if (e.key === 'ArrowLeft' || e.key === 'a') makeMove(0);
+            if (e.key === 'ArrowUp' || e.key === 'w') makeMove(1);
+            if (e.key === 'ArrowRight' || e.key === 'd') makeMove(2);
+            if (e.key === 'ArrowDown' || e.key === 's') makeMove(3);
+        });
+
+        // --- РЕКЛАМА И СПАСЕНИЕ ---
+
+        function showAdToContinue() {
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+
+            tg.showPopup({
+                title: 'Просмотр рекламы',
+                message: 'Реклама загружается... (Плейсхолдер)',
+                buttons: [{ type: 'close' }]
+            });
+
+            setTimeout(() => {
+                rewardUserAfterAd();
+            }, 2000);
+        }
+
+        function rewardUserAfterAd() {
+            adUsedInThisGame = true;
+            btnAd.style.display = 'none';
+            gameOverOverlay.style.display = 'none';
+
+            let activeTiles = [];
+            for (let r = 0; r < boardSize; r++) {
+                for (let c = 0; c < boardSize; c++) {
+                    if (board[r][c]) activeTiles.push({r, c, val: board[r][c].value});
+                }
+            }
+
+            activeTiles.sort((a, b) => a.val - b.val);
+            let clearLimit = boardSize >= 5 ? 6 : 4;
+            let limit = Math.min(activeTiles.length, clearLimit);
+            
+            for (let i = 0; i < limit; i++) {
+                let cell = activeTiles[i];
+                let tile = board[cell.r][cell.c];
+                if (tile) {
+                    tile.element.remove();
+                    board[cell.r][cell.c] = null;
+                }
+            }
+
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+            spawnTile();
+            renderTiles();
+        }
+
+        btnRestart.addEventListener('click', initGame);
+        btnAd.addEventListener('click', showAdToContinue);
+    </script>
+</body>
+</html>
